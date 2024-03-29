@@ -130,7 +130,92 @@ avformat_free_context(fmt_ctx);
 
 
 
+## 简单demo
 
+```c++
+#include <stdio.h>
+#include <libavformat/avformat.h>
+
+int main() {
+    AVFormatContext *video_fmt_ctx = NULL;
+    AVFormatContext *audio_fmt_ctx = NULL;
+    AVFormatContext *out_fmt_ctx = NULL;
+    AVPacket video_pkt, audio_pkt;
+    int ret;
+
+    // 打开视频文件
+    if ((ret = avformat_open_input(&video_fmt_ctx, "input.h264", NULL, NULL)) < 0) {
+        fprintf(stderr, "Error opening video input file\n");
+        return ret;
+    }
+    if ((ret = avformat_find_stream_info(video_fmt_ctx, NULL)) < 0) {
+        fprintf(stderr, "Error finding video stream information\n");
+        return ret;
+    }
+
+    // 打开音频文件
+    if ((ret = avformat_open_input(&audio_fmt_ctx, "input.aac", NULL, NULL)) < 0) {
+        fprintf(stderr, "Error opening audio input file\n");
+        return ret;
+    }
+    if ((ret = avformat_find_stream_info(audio_fmt_ctx, NULL)) < 0) {
+        fprintf(stderr, "Error finding audio stream information\n");
+        return ret;
+    }
+
+    // 创建 FLV 格式的输出文件
+    if ((ret = avformat_alloc_output_context2(&out_fmt_ctx, NULL, NULL, "output.flv")) < 0) {
+        fprintf(stderr, "Error creating output context\n");
+        return ret;
+    }
+
+    // 添加视频流和音频流到输出文件
+    for (int i = 0; i < video_fmt_ctx->nb_streams; i++) {
+        AVStream *stream = avformat_new_stream(out_fmt_ctx, NULL);
+        avcodec_parameters_copy(stream->codecpar, video_fmt_ctx->streams[i]->codecpar);
+    }
+    for (int i = 0; i < audio_fmt_ctx->nb_streams; i++) {
+        AVStream *stream = avformat_new_stream(out_fmt_ctx, NULL);
+        avcodec_parameters_copy(stream->codecpar, audio_fmt_ctx->streams[i]->codecpar);
+    }
+
+    // 打开输出文件
+    if ((ret = avio_open(&out_fmt_ctx->pb, "output.flv", AVIO_FLAG_WRITE)) < 0) {
+        fprintf(stderr, "Error opening output file\n");
+        return ret;
+    }
+
+    // 写入输出文件的头部
+    avformat_write_header(out_fmt_ctx, NULL);
+
+    // 将视频文件的数据写入输出文件
+    while (av_read_frame(video_fmt_ctx, &video_pkt) >= 0) {
+        av_interleaved_write_frame(out_fmt_ctx, &video_pkt);
+        av_packet_unref(&video_pkt);
+    }
+
+    // 将音频文件的数据写入输出文件
+    while (av_read_frame(audio_fmt_ctx, &audio_pkt) >= 0) {
+        av_interleaved_write_frame(out_fmt_ctx, &audio_pkt);
+        
+        //AVPacket 的数据流向是先流入到 AVFormatContext 中，然后流向输出文件。通过 av_interleaved_write_frame() 函数，数据包被写入到 AVFormatContext 中，并最终写入到输出文件中。
+        
+        av_packet_unref(&audio_pkt);
+        
+    }
+
+    // 写入输出文件的尾部
+    av_write_trailer(out_fmt_ctx);
+
+    // 释放资源
+    avformat_close_input(&video_fmt_ctx);
+    avformat_close_input(&audio_fmt_ctx);
+    avformat_free_context(out_fmt_ctx);
+
+    return 0;
+}
+
+```
 
 
 

@@ -41,6 +41,8 @@ int ret = avio_open(&fmt_ctx_->pb, url_.c_str(), AVIO_FLAG_WRITE);
 
 # AVIO自定义IO操作代码
 
+对AAC裸流进行解码，可以使用解析器，也可以使用内存IO模式
+
 ```c++
 //打开输入输出文件
 in_file = fopen(in_file_name, "rb");
@@ -137,3 +139,4 @@ static int read_packet(void *opaque, uint8_t *buf, int buf_size)
 }
 ```
 
+![image-20240320173035191](https://my-figures.oss-cn-beijing.aliyuncs.com/Figures/image-20240320173035191.png)

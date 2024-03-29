@@ -34,6 +34,16 @@ NALU 是视频编码中的基本单元，它将视频帧分割成一个个小的
 
 NALU 的存在使得视频数据能够以单元的方式进行传输和解码，以及在网络上进行流式传输。它是视频编码和解码的基础构建块之一。
 
+NALU（Network Abstraction Layer Unit）是视频编码过程中的基本单位，它是在视频流中进行编码和解码的基本单元。视频编码器将原始的视频帧分割成一个个的NALU，并对每个NALU进行压缩编码，最终形成压缩后的视频流。在解码端，解码器会逐个解码这些NALU，还原出原始的视频帧。
+
+因此，NALU与视频帧之间的关系可以描述为：
+
+1. **NALU是视频帧的编码表示**：原始的视频帧经过编码器处理后，被分割成一个个的NALU。每个NALU包含了编码器对视频帧进行压缩编码后的数据。
+2. **多个NALU组成一个完整的视频帧**：一个完整的视频帧可能会被分割成多个NALU进行编码，这些NALU经过解码后能够还原出原始的视频帧。
+3. **视频帧由NALU组装而成**：在解码端，解码器会逐个解码接收到的NALU，并根据视频编码格式的规范将这些NALU组装成原始的视频帧。
+
+综上所述，NALU是视频编码过程中的编码单元，而视频帧是在解码过程中由NALU组装而成的原始视频数据单元。在视频编解码过程中，NALU和视频帧之间存在着密切的关系，NALU是视频帧经过编码后的表示形式，而视频帧则是NALU经过解码后还原出的原始视频数据。
+
 ![image-20230927103606861](https://my-figures.oss-cn-beijing.aliyuncs.com/Figures/image-20230927103606861.png)
 
 ![image-20230927104733017](https://my-figures.oss-cn-beijing.aliyuncs.com/Figures/image-20230927104733017.png)
@@ -41,6 +51,8 @@ NALU 的存在使得视频数据能够以单元的方式进行传输和解码，
 解复用（Demuxing）的过程可以从多媒体文件中提取出音频、视频和其他数据流，通常这些流是裸流（Elementary Stream）的一部分。裸流是原始的音频或视频数据，通常不包含封装格式的额外信息。
 
 裸流（Elementary Stream）通常是原始的音频或视频数据，没有包含封装格式或其他附加信息，因此无法直接播放。裸流是原始的编码数据，通常需要进一步处理才能进行播放或解码。
+
+AVPacket前4个字表示的是nalu的长度，从第5个字节开始才是nalu的数据。所以直接将AVPacket前4个字节替换为0x00000001即可得到标准的nalu数据。
 
 ```c
 const AVBitStreamFilter *bsfilter = av_bsf_get_by_name("h264_mp4toannexb");
@@ -95,7 +107,9 @@ FLV/MP4/MKV等结构中，h264需要h264_mp4toannexb处理。添加信息
 
 视频Tag Data开始的：
 第⼀个字节包含视频数据的参数信息，
-第⼆个字节开始为视频流数据，如下图，1字节+3字节+Data字节
+第⼆个字节开始为视频流数据，
+
+如下图，1字节+3字节+Data字节
 
 故offset初始 = 5。
 
@@ -121,6 +135,8 @@ FLV/MP4/MKV等结构中，h264需要h264_mp4toannexb处理。添加信息
 
 通常情况下，从FLV文件中解析的音频AAC数据已经包含了ADTS（Audio Data Transport Stream）封装。ADTS是一种用于封装AAC音频数据的常见格式，它包含了音频帧的头部信息和原始音频数据，以便解码器能够正确地解释和播放音频。
 
+<img src="https://my-figures.oss-cn-beijing.aliyuncs.com/Figures/image-20240320155238456.png" alt="image-20240320155238456" style="zoom:100%;" />
+
 -------------
 
 ------------
@@ -136,6 +152,8 @@ aac_fd = fopen(aac_filename, "wb");
 
 AVFormatContext * ifmt_ctx = avformat_alloc_context();
 avformat_open_input(&ifmt_ctx, in_filename, NULL, NULL);
+/*在打开媒体文件时，avformat_open_input() 函数会根据文件的格式选择合适的 AVInputFormat。这个信息将存储在 AVFormatContext 结构体中的 iformat 字段中。
+AVInputFormat 主要用于描述和标识媒体文件的输入格式的特性，而 AVFormatContext 包含了实际打开的媒体文件的详细信息。*/
 avformat_find_stream_info(ifmt_ctx, NULL);//查找媒体流、编解码器等配置信息。赋值给ctx
 //ifmt_ctx->streams[audio_index]->codecpar->codec_id != AV_CODEC_ID_AAC
 //调用之后就知道每一道流中的具体信息,调用av_find_best_stream等函数
