@@ -111,6 +111,9 @@ while (1) {
 mp4_muxer.SendPacket(packet);
         // 时间基转换：确保音频包的时间戳与输出容器的时间基一致，以便在正确的时间点写入文件。
         //vid_stream_->time_base通常在创建编码器和封装器以及调用 'avformat_write_header' 函数时进行设置。
+        src_time_base = vid_codec_ctx_->time_base;
+        dst_time_base = vid_stream_->time_base;
+    
         packet->pts = av_rescale_q(packet->pts, src_time_base, dst_time_base);
         packet->dts = av_rescale_q(packet->dts, src_time_base, dst_time_base);
         packet->duration = av_rescale_q(packet->duration, src_time_base, dst_time_base);
@@ -121,5 +124,29 @@ mp4_muxer.SendPacket(packet);
 //6. 发送尾数据
 av_write_trailer(fmt_ctx_);    
     
+```
+
+```c++
+av_rescale_q
+将一个时间戳从一个时间基转换到另一个时间基。例如，如果有一个时间戳在基于 1/25 的时间基中，你想转换到基于 1/1000 的时间基中。
+
+AVRational src_tb = {1, 25};    // 原始时间基（每帧40毫秒）
+AVRational dst_tb = {1, 1000};  // 目标时间基（每毫秒）
+int64_t timestamp = 40;         // 在原始时间基中的时间戳
+int64_t new_timestamp = av_rescale_q(timestamp, src_tb, dst_tb);
+
+//**********************************************************************************************
+av_rescale_rnd： nt64_t av_rescale_rnd(int64_t a, int64_t b, int64_t c, enum AVRounding rnd);
+参数:
+
+a: 要转换的时间戳或其他数值。
+b: 乘数（通常是目标时间基的分母）。
+c: 除数（通常是原始时间基的分母）。
+rnd: 舍入方式，可以是 AV_ROUND_ZERO, AV_ROUND_INF, AV_ROUND_DOWN, AV_ROUND_UP, AV_ROUND_NEAR_INF, AV_ROUND_PASS_MINMAX 等。
+
+int64_t timestamp = 40;        // 时间戳
+int64_t new_timestamp = av_rescale_rnd(timestamp, 1000, 25, AV_ROUND_NEAR_INF);
+
+
 ```
 
