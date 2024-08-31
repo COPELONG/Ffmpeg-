@@ -43,6 +43,12 @@ int ret = avio_open(&fmt_ctx_->pb, url_.c_str(), AVIO_FLAG_WRITE);
 
 对AAC裸流进行解码，可以使用解析器，也可以使用内存IO模式
 
+调用 `avformat_open_input` 时，如果 `AVFormatContext` 中的 `AVIOContext` 字段为 `NULL`，FFmpeg 会自动为你分配并初始化一个默认的 `AVIOContext`。
+
+这个 `AVIOContext` 由 FFmpeg 内部管理，负责从文件或流中读取数据。
+
+
+
 ```c++
 //打开输入输出文件
 in_file = fopen(in_file_name, "rb");
